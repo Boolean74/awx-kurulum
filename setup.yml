@@ -3,23 +3,42 @@
   hosts: all
   become: yes
   tasks:
-    - name: 1. Eski Docker kalintilarini ve her seyi sil
+    - name: 1. Cakisan Docker dosyalarini ve kilitleri kokten sil
       shell: |
-        docker stop $(docker ps -aq) || true
-        docker rm $(docker ps -aq) || true
-        apt-get purge -y docker-engine docker.io containerd runc
-        rm -rf /var/lib/docker
-        rm -rf /etc/docker
+        # Paket kilidini ac
+        rm /var/lib/dpkg/lock-frontend || true
+        rm /var/lib/apt/lists/lock || true
+        # Cakisan Docker depo listelerini sil
+        rm -f /etc/apt/sources.list.d/docker.list
+        rm -f /etc/apt/keyrings/docker.gpg
+        # Eski paketleri temizle
+        apt-get purge -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin docker.io docker-doc docker-compose podman-docker containerd runc || true
+        apt-get autoremove -y
+        apt-get update -y
       ignore_errors: yes
 
-    - name: 2. En guncel Docker'i yukle
-      shell: curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
-
-    - name: 3. Portainer Konteynerini Baslat
+    - name: 2. Docker Kurulumunu Manuel Yap (Script yerine)
       shell: |
+        # Gerekli paketleri yukle
+        apt-get install -y ca-certificates curl gnupg
+        # Docker resmi anahtarini ekle
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
+        chmod a+r /etc/apt/keyrings/docker.gpg
+        # Depoyu ekle
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        apt-get update -y
+        # Docker'i yukle
+        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      register: manual_docker
+
+    - name: 3. Portainer ve NPM Konteynerlerini Ayaga Kaldir
+      shell: |
+        # Portainer
         docker volume create portainer_data || true
+        docker rm -f portainer || true
         docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
-
-    - name: 4. Nginx Proxy Manager (NPM) Baslat
-      shell: |
+        
+        # Nginx Proxy Manager
+        docker rm -f nginx-proxy-manager || true
         docker run -d --name nginx-proxy-manager --restart always -p 80:80 -p 81:81 -p 443:443 -v npm_data:/data -v npm_letsencrypt:/etc/letsencrypt jc21/nginx-proxy-manager:latest
