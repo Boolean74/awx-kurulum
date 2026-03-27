@@ -1,0 +1,25 @@
+---
+- name: Sunuculari Temizle ve Docker-Portainer-NPM Kur
+  hosts: all
+  become: yes
+  tasks:
+    - name: 1. Eski Docker kalintilarini ve her seyi sil
+      shell: |
+        docker stop $(docker ps -aq) || true
+        docker rm $(docker ps -aq) || true
+        apt-get purge -y docker-engine docker.io containerd runc
+        rm -rf /var/lib/docker
+        rm -rf /etc/docker
+      ignore_errors: yes
+
+    - name: 2. En guncel Docker'i yukle
+      shell: curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh
+
+    - name: 3. Portainer Konteynerini Baslat
+      shell: |
+        docker volume create portainer_data || true
+        docker run -d -p 8000:8000 -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
+
+    - name: 4. Nginx Proxy Manager (NPM) Baslat
+      shell: |
+        docker run -d --name nginx-proxy-manager --restart always -p 80:80 -p 81:81 -p 443:443 -v npm_data:/data -v npm_letsencrypt:/etc/letsencrypt jc21/nginx-proxy-manager:latest
