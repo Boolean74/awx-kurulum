@@ -1,32 +1,54 @@
 ---
-- name: Oracle Root Kurulumu
+- name: Oracle Root Kurulumu (Docker-Portainer-NPM)
   hosts: all
   become: yes
   tasks:
-    - name: 1. Paket Kilidini Zorla Ac
+    - name: 1. Paket Kilidini Zorla Ac ve Guncelle
       shell: |
         rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*
         dpkg --configure -a
+        apt-get update
       ignore_errors: yes
 
     - name: 2. Docker Icin Gerekli Temel Araclar
       apt:
-        name: [curl, gnupg, lsb-release, ca-certificates]
+        name: [curl, gnupg, lsb-release, ca-certificates, python3-pip]
         state: present
-        update_cache: yes
 
-    - name: 3. Docker GPG Anahtari (Hata Almamak Icin Sil ve Ekle)
+    - name: 3. Docker Deposunu Kur ve Guncelle
       shell: |
         install -m 0755 -d /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
-        chmod a+r /etc/apt/keyrings/docker.gpg
-
-    - name: 4. Docker Deposunu Listeye Ekle
-      shell: |
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
         apt-get update
 
-    - name: 5. Docker Paketlerini Yukle
+    - name: 4. Docker Paketlerini Yukle
       apt:
         name: [docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin]
         state: present
+
+    - name: 5. Portainer Konteynerini Baslat (Port 9444)
+      community.docker.docker_container:
+        name: portainer
+        image: portainer/portainer-ce:latest
+        state: started
+        restart_policy: always
+        published_ports:
+          - "9444:9443"  # Dışarıdan 9444 ile bağlanacağız (HTTPS)
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+          - portainer_data:/data
+
+    - name: 6. Nginx Proxy Manager (NPM) Baslat (Port 8181)
+      community.docker.docker_container:
+        name: nginx-proxy-manager
+        image: 'jc21/nginx-proxy-manager:latest'
+        state: started
+        restart_policy: always
+        published_ports:
+          - "80:80"      # Normal Web Trafiği
+          - "8181:81"    # Yönetim Paneli (Bizim Port)
+          - "443:443"    # Güvenli Web Trafiği
+        volumes:
+          - ./npm_data:/data
+          - ./npm_letsencrypt:/etc/letsencrypt
