@@ -1,0 +1,32 @@
+---
+- name: Oracle Root Kurulumu
+  hosts: all
+  become: yes
+  tasks:
+    - name: 1. Paket Kilidini Zorla Ac
+      shell: |
+        rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*
+        dpkg --configure -a
+      ignore_errors: yes
+
+    - name: 2. Docker Icin Gerekli Temel Araclar
+      apt:
+        name: [curl, gnupg, lsb-release, ca-certificates]
+        state: present
+        update_cache: yes
+
+    - name: 3. Docker GPG Anahtari (Hata Almamak Icin Sil ve Ekle)
+      shell: |
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
+        chmod a+r /etc/apt/keyrings/docker.gpg
+
+    - name: 4. Docker Deposunu Listeye Ekle
+      shell: |
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        apt-get update
+
+    - name: 5. Docker Paketlerini Yukle
+      apt:
+        name: [docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin]
+        state: present
