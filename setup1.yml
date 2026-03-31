@@ -3,44 +3,37 @@
   hosts: all
   become: yes
   tasks:
-    - name: 1. Paket Kilidini Zorla Ac ve Guncelle
+    - name: 1. DNS ve Paket Kilidi Temizliği
       shell: |
+        echo "nameserver 8.8.8.8" > /etc/resolv.conf
         rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock*
         dpkg --configure -a
-        apt-get update
+        apt-get update -y
       ignore_errors: yes
 
-    - name: 2. Docker Icin Gerekli Temel Araclar
+    - name: 2. Temel Paketleri Yukle (Hata Alirsa Atla)
       apt:
         name: [curl, gnupg, lsb-release, ca-certificates]
         state: present
+        update_cache: yes
+      register: apt_result
+      until: apt_result is success
+      retries: 3
+      delay: 5
 
-    - name: 3. Docker Deposunu Kur
+    - name: 3. Docker Kurulumu ve Konteynerlar
       shell: |
+        # Docker Deposu
         install -m 0755 -d /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
-        apt-get update
+        apt-get update -y
+        apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-    - name: 4. Docker Paketlerini Yukle
-      apt:
-        name: [docker-ce, docker-ce-cli, containerd.io, docker-compose-plugin]
-        state: present
+        # Portainer (Port 9444)
+        docker stop portainer || true && docker rm portainer || true
+        docker run -d -p 9444:9443 --name portainer --restart always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:latest
 
-    - name: 5. Portainer Konteynerini Baslat (Port 9444)
-      shell: |
-        docker stop portainer || true
-        docker rm portainer || true
-        docker run -d -p 9444:9443 --name portainer --restart always \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        -v portainer_data:/data \
-        portainer/portainer-ce:latest
-
-    - name: 6. Nginx Proxy Manager (NPM) Baslat (Port 8181)
-      shell: |
-        docker stop nginx-proxy-manager || true
-        docker rm nginx-proxy-manager || true
-        docker run -d -p 80:80 -p 8181:81 -p 443:443 --name nginx-proxy-manager --restart always \
-        -v ./npm_data:/data \
-        -v ./npm_letsencrypt:/etc/letsencrypt \
-        jc21/nginx-proxy-manager:latest
+        # NPM (Port 8181)
+        docker stop nginx-proxy-manager || true && docker rm nginx-proxy-manager || true
+        docker run -d -p 80:80 -p 8181:81 -p 443:443 --name nginx-proxy-manager --restart always -v ./npm_data:/data -v ./npm_letsencrypt:/etc/letsencrypt jc21/nginx-proxy-manager:latest
