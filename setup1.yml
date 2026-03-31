@@ -12,10 +12,10 @@
 
     - name: 2. Docker Icin Gerekli Temel Araclar
       apt:
-        name: [curl, gnupg, lsb-release, ca-certificates, python3-pip]
+        name: [curl, gnupg, lsb-release, ca-certificates]
         state: present
 
-    - name: 3. Docker Deposunu Kur ve Guncelle
+    - name: 3. Docker Deposunu Kur
       shell: |
         install -m 0755 -d /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
@@ -28,27 +28,19 @@
         state: present
 
     - name: 5. Portainer Konteynerini Baslat (Port 9444)
-      community.docker.docker_container:
-        name: portainer
-        image: portainer/portainer-ce:latest
-        state: started
-        restart_policy: always
-        published_ports:
-          - "9444:9443"  # Dışarıdan 9444 ile bağlanacağız (HTTPS)
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock
-          - portainer_data:/data
+      shell: |
+        docker stop portainer || true
+        docker rm portainer || true
+        docker run -d -p 9444:9443 --name portainer --restart always \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v portainer_data:/data \
+        portainer/portainer-ce:latest
 
     - name: 6. Nginx Proxy Manager (NPM) Baslat (Port 8181)
-      community.docker.docker_container:
-        name: nginx-proxy-manager
-        image: 'jc21/nginx-proxy-manager:latest'
-        state: started
-        restart_policy: always
-        published_ports:
-          - "80:80"      # Normal Web Trafiği
-          - "8181:81"    # Yönetim Paneli (Bizim Port)
-          - "443:443"    # Güvenli Web Trafiği
-        volumes:
-          - ./npm_data:/data
-          - ./npm_letsencrypt:/etc/letsencrypt
+      shell: |
+        docker stop nginx-proxy-manager || true
+        docker rm nginx-proxy-manager || true
+        docker run -d -p 80:80 -p 8181:81 -p 443:443 --name nginx-proxy-manager --restart always \
+        -v ./npm_data:/data \
+        -v ./npm_letsencrypt:/etc/letsencrypt \
+        jc21/nginx-proxy-manager:latest
