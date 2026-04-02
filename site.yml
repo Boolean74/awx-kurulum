@@ -1,9 +1,12 @@
 ---
 - name: O_o-ai Musteri Teslimat Operasyonu
-  hosts: all
+  hosts: "{{ target_host | default('all') }}"  # Survey'de seçtiğin makineye gider, seçmezsen hepsine.
   become: yes
-  tasks:
+  vars:
+    # Gereksiz Python uyarılarını kapatmak için sihirli satır
+    ansible_python_interpreter: /usr/bin/python3.10
 
+  tasks:
     # --- 1. SEÇENEK: FULL (Ubuntu 22.04 VM) ---
     - name: "FULL PAKET: Masaüstü ve Uzak Masaüstü Kuruluyor"
       shell: |
@@ -11,19 +14,22 @@
         apt install -y xfce4 xfce4-goodies xrdp
         systemctl enable xrdp
         systemctl start xrdp
-      when: user_choice == "full_vm"  # Sadece Full seçilirse çalışır
+      when: user_choice == "full_vm"
+      async: 600  # Kurulum uzun sürerse bağlantı kopmasın diye
+      poll: 10
 
     # --- 2. SEÇENEK: LIGHT (Linux Desktop Container) ---
     - name: "LIGHT PAKET: Sadece Temel Araclar Kuruluyor"
       shell: |
         apt update
         apt install -y git curl htop tmux
-      when: user_choice == "light_container" # Sadece Light seçilirse çalışır
+      when: user_choice == "light_container"
 
     # --- ORTAK GÖREV: Şifre Belirleme ---
-    - name: "Musteri Sifresini Olustur"
+    - name: "Musteri Sifresini Olustur (Kullanıcı: oo_user)"
       user:
         name: "oo_user"
         password: "{{ 'Oo_Ai_2026!' | password_hash('sha512') }}"
         groups: sudo
         shell: /bin/bash
+        state: present
