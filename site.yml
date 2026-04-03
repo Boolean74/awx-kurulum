@@ -1,25 +1,32 @@
-
 ---
-- name: "M-Cloud GPU Provisioning"
+- name: "M-Cloud Kasm VNC Desktop Provisioning"
   hosts: all
   gather_facts: no
+  vars:
+    # Varsayılan değişkenler
+    user_choice: "full_vm"
 
   tasks:
-    - name: "FULL PAKET: Baslatiliyor"
+    - name: "KASM: ARM64 Native Desktop Kuruluyor"
       community.docker.docker_container:
-        name: "mcloud_full_{{ 9999 | random }}"
-        image: "dorowu/ubuntu-desktop-lxde-vnc"
+        name: "mcloud_kasm_desktop"
+        image: "kasmweb/ubuntu-jammy-desktop:1.15.0"
         state: started
+        restart_policy: always
+        # Kasılmayı önleyen en kritik donanım ayarı (Shared Memory)
+        shm_size: "1g"
+        privileged: true
+        env:
+          VNC_PW: "password123"
+          TZ: "Europe/Istanbul"
         published_ports:
-          - "30500:80"
+          - "30500:6901"
       when: user_choice == 'full_vm'
 
-    - name: "LIGHT PAKET: Baslatiliyor"
+    - name: "LIGHT: Standart Ubuntu Container"
       community.docker.docker_container:
         name: "mcloud_light_{{ 9999 | random }}"
-        image: "ubuntu:latest"
+        image: "arm64v8/ubuntu:latest"
         state: started
         command: sleep infinity
-        published_ports:
-          - "30501:22"
       when: user_choice == 'light_container'
