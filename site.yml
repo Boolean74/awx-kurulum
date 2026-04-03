@@ -1,6 +1,6 @@
 ---
 - name: "M-Cloud VNC Provisioning"
-  hosts: all
+  hosts: localhost 
   gather_facts: no
   vars:
     user_choice: "full_vm"
