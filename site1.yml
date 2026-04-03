@@ -1,0 +1,52 @@
+---
+- name: M-Cloud Dinamik Portlu Kurulum
+  hosts: "{{ target_host | default('all') }}"
+  become: yes
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.10
+    # Kullanıcı adındaki boşlukları ve özel karakterleri temizle
+    safe_owner: "{{ owner | default('user') | regex_replace('[^a-zA-Z0-9]', '') }}"
+    # Rastgele bir ID oluştur
+    instance_id: "{{ 9999 | random }}"
+    # 30000 - 31000 arasında rastgele bir port seç (Çakışmayı önlemek için)
+    dynamic_port: "{{ 30000 + (1000 | random) }}"
+
+  tasks:
+    # --- 1. SEÇENEK: FULL VM (Masaüstü) ---
+    - name: "FULL PAKET: Port {{ dynamic_port }} üzerinden başlatılıyor"
+      docker_container:
+        name: "mcloud_{{ safe_owner }}_{{ instance_id }}"
+        image: "dorowu/ubuntu-desktop-lxde-vnc"
+        state: started
+        published_ports:
+          - "{{ dynamic_port }}:6080" # Dışarıdaki rastgele portu, içerdeki 6080'e bağla
+        env:
+          VNC_PASSWORD: "Oo_Ai_2026!"
+      when: user_choice == "full_vm"
+
+    # --- 2. SEÇENEK: LIGHT (CLI) ---
+    - name: "LIGHT PAKET: Port {{ dynamic_port }} üzerinden SSH (temsili) başlatılıyor"
+      docker_container:
+        name: "mcloud_{{ safe_owner }}_{{ instance_id }}"
+        image: "ubuntu:22.04"
+        state: started
+        tty: yes
+        published_ports:
+          - "{{ dynamic_port }}:22" # CLI için de farklı port verelim
+        command: sleep infinity
+      when: user_choice == "light_container"
+
+    # --- BİLGİLERİ TOPLA ---
+    - name: "Konteyner IP Bilgisini Al"
+      shell: "docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mcloud_{{ safe_owner }}_{{ instance_id }}"
+      register: container_ip
+
+    # --- SONUÇLARI PANELE GÖNDER ---
+    - name: "Kurulum Bilgileri"
+      debug:
+        msg: |
+          TEBRİKLER! Makinen hazır.
+          Erişim Adresi: http://{{ ansible_host }}:{{ dynamic_port }}
+          Kullanıcı: oo_user
+          Şifre: Oo_Ai_2026!
+          Makine Adı: mcloud_{{ safe_owner }}_{{ instance_id }}
