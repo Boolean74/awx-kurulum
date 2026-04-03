@@ -1,16 +1,10 @@
+
 ---
 - name: "M-Cloud GPU Provisioning"
   hosts: all
   gather_facts: no
 
   tasks:
-    # 1. ADIM: MODÜLÜ ZORLA KURDUR (Hata buradaydı, bu satır çözecek)
-    - name: "Docker Koleksiyonunu Manuel Yukle"
-      delegate_to: localhost
-      ansible.builtin.command: ansible-galaxy collection install community.docker
-      ignore_errors: yes
-
-    # 2. ADIM: FULL VM PAKETİ
     - name: "FULL PAKET: Baslatiliyor"
       community.docker.docker_container:
         name: "mcloud_full_{{ 9999 | random }}"
@@ -20,7 +14,6 @@
           - "30500:80"
       when: user_choice == 'full_vm'
 
-    # 3. ADIM: LIGHT PAKET
     - name: "LIGHT PAKET: Baslatiliyor"
       community.docker.docker_container:
         name: "mcloud_light_{{ 9999 | random }}"
