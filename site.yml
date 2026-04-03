@@ -12,7 +12,7 @@
         image: "kasmweb/ubuntu-jammy-desktop:1.15.0"
         state: started
         restart_policy: always
-        shm_size: "1g"  # Tarayıcı kasılmalarını önler
+        shm_size: "1g"
         privileged: true
         env:
           VNC_PW: "password123"
