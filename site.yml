@@ -1,9 +1,8 @@
 ---
-- name: "M-Cloud Kasm VNC Desktop Provisioning"
+- name: "M-Cloud Kasm VNC Provisioning"
   hosts: all
   gather_facts: no
   vars:
-    # Varsayılan değişkenler
     user_choice: "full_vm"
 
   tasks:
@@ -13,17 +12,15 @@
         image: "kasmweb/ubuntu-jammy-desktop:1.15.0"
         state: started
         restart_policy: always
-        # Kasılmayı önleyen en kritik donanım ayarı (Shared Memory)
-        shm_size: "1g"
+        shm_size: "1g"  # Tarayıcı kasılmalarını önler
         privileged: true
         env:
           VNC_PW: "password123"
-          TZ: "Europe/Istanbul"
         published_ports:
           - "30500:6901"
       when: user_choice == 'full_vm'
 
-    - name: "LIGHT: Standart Ubuntu Container"
+    - name: "LIGHT: Ubuntu Container"
       community.docker.docker_container:
         name: "mcloud_light_{{ 9999 | random }}"
         image: "arm64v8/ubuntu:latest"
