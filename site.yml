@@ -3,13 +3,15 @@
   hosts: all
   gather_facts: no
 
+  collections:
+    - community.docker
+
   vars:
     dynamic_port: "{{ 30000 + (range(0, 9999) | random) }}"
     safe_owner: "{{ owner | default('Mehmet_User') | regex_replace('[^a-zA-Z0-9]', '_') }}"
 
   tasks:
 
-    # FULL VM
     - name: "Full VM Container"
       community.docker.docker_container:
         name: "mcloud_{{ safe_owner }}_{{ dynamic_port }}"
@@ -20,7 +22,6 @@
           - "{{ dynamic_port }}:6080"
       when: user_choice == 'full_vm'
 
-    # LIGHT
     - name: "Light Container"
       community.docker.docker_container:
         name: "mcloud_light_{{ safe_owner }}_{{ dynamic_port }}"
@@ -31,8 +32,3 @@
         ports:
           - "{{ dynamic_port }}:22"
       when: user_choice == 'light_container'
-
-    # DEBUG / OUTPUT
-    - name: "Debug Port"
-      debug:
-        msg: "Container port: {{ dynamic_port }}"
