@@ -2,36 +2,24 @@
 - name: "M-Cloud GPU Provisioning"
   hosts: all
   gather_facts: no
-  
-  # MODÜL HATASINI ÇÖZEN KRİTİK SATIR
-  collections:
-    - community.docker
 
   vars:
-    # 30000-31000 arası rastgele port seçer
+    # Rastgele port seçimi
     dynamic_port: "{{ range(30000, 31000) | random }}"
+    # Kullanıcı adındaki geçersiz karakterleri temizle
     safe_owner: "{{ owner | default('Mehmet_User') | regex_replace('[^a-zA-Z0-9]', '_') }}"
 
   tasks:
-    - name: "Koleksiyonun yüklü olduğundan emin ol"
-      delegate_to: localhost
-      command: ansible-galaxy collection install community.docker
-      run_once: true
-      ignore_errors: yes
-
-    # --- 1. SEÇENEK: FULL VM (Masaüstü) ---
-    - name: "FULL PAKET: Başlatılıyor"
+    - name: "Docker Konteynerını Başlat (Full VM)"
       community.docker.docker_container:
         name: "mcloud_{{ safe_owner }}_{{ dynamic_port }}"
-        image: "dorowu/ubuntu-desktop-lxde-vnc" # Örnek VNC imajı
+        image: "dorowu/ubuntu-desktop-lxde-vnc"
         state: started
-        restart_policy: always
         published_ports:
           - "{{ dynamic_port }}:80"
       when: user_choice == 'full_vm'
 
-    # --- 2. SEÇENEK: LIGHT (Terminal) ---
-    - name: "LIGHT PAKET: Başlatılıyor"
+    - name: "Docker Konteynerını Başlat (Light)"
       community.docker.docker_container:
         name: "mcloud_light_{{ safe_owner }}_{{ dynamic_port }}"
         image: "ubuntu:latest"
@@ -40,7 +28,3 @@
         published_ports:
           - "{{ dynamic_port }}:22"
       when: user_choice == 'light_container'
-
-    - name: "Sonuç Mesajı"
-      debug:
-        msg: "Sistem Hazır! Port: {{ dynamic_port }}"
