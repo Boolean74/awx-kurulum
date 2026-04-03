@@ -19,6 +19,8 @@
           PGID: "1000"
           TZ: "Europe/Istanbul"
           PASSWORD: "{{ vnc_password }}"
+          TITLE: "M-Cloud"
+          NO_HTTPS: "true"
         published_ports:
           - "30500:3000"
         volumes:
