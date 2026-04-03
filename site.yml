@@ -22,7 +22,7 @@
           TITLE: "M-Cloud"
           NO_HTTPS: "true"
         published_ports:
-          - "30500:3000"
+          - "30500:3001"
         volumes:
           - "/mnt/depo/webtop:/config"
       when: user_choice == 'full_vm'
