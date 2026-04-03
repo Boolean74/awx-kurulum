@@ -4,6 +4,12 @@
   gather_facts: no
 
   tasks:
+    # KOLEKSİYONU BURADA ZORLA KURDURUYORUZ
+    - name: "Docker Koleksiyonunu Manuel Yukle"
+      delegate_to: localhost
+      command: ansible-galaxy collection install community.docker
+      ignore_errors: yes
+
     - name: "FULL VM Baslatiliyor"
       community.docker.docker_container:
         name: "mcloud_full_{{ 9999 | random }}"
@@ -12,13 +18,3 @@
         published_ports:
           - "30500:80"
       when: user_choice == 'full_vm'
-
-    - name: "LIGHT Baslatiliyor"
-      community.docker.docker_container:
-        name: "mcloud_light_{{ 9999 | random }}"
-        image: "ubuntu:latest"
-        state: started
-        command: sleep infinity
-        published_ports:
-          - "30501:22"
-      when: user_choice == 'light_container'
