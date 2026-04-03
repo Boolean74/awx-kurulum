@@ -3,32 +3,41 @@
   hosts: all
   gather_facts: no
 
+  # Hata almamak için koleksiyonu burada da belirtiyoruz
   collections:
     - community.docker
 
   vars:
-    dynamic_port: "{{ 30000 + (range(0, 9999) | random) }}"
+    # 30000-31000 arası rastgele port seçer
+    dynamic_port: "{{ range(30000, 31000) | random }}"
+    # Kullanıcı adını güvenli hale getirir (Boşlukları temizler)
     safe_owner: "{{ owner | default('Mehmet_User') | regex_replace('[^a-zA-Z0-9]', '_') }}"
 
   tasks:
-
-    - name: "Full VM Container"
+    # --- SEÇENEK 1: FULL VM (Masaüstü) ---
+    - name: "FULL PAKET: Masaüstü Konteyner Başlatılıyor"
       community.docker.docker_container:
-        name: "mcloud_{{ safe_owner }}_{{ dynamic_port }}"
+        name: "mcloud_full_{{ safe_owner }}_{{ dynamic_port }}"
         image: "dorowu/ubuntu-desktop-lxde-vnc"
         state: started
         restart_policy: always
-        ports:
-          - "{{ dynamic_port }}:6080"
+        published_ports:
+          - "{{ dynamic_port }}:80"
       when: user_choice == 'full_vm'
 
-    - name: "Light Container"
+    # --- SEÇENEK 2: LIGHT (Terminal) ---
+    - name: "LIGHT PAKET: Terminal Konteyner Başlatılıyor"
       community.docker.docker_container:
         name: "mcloud_light_{{ safe_owner }}_{{ dynamic_port }}"
-        image: "ubuntu:22.04"
+        image: "ubuntu:latest"
         state: started
         command: sleep infinity
         restart_policy: always
-        ports:
+        published_ports:
           - "{{ dynamic_port }}:22"
       when: user_choice == 'light_container'
+
+    # --- SONUÇ BİLGİSİ ---
+    - name: "Kurulum Detaylarını Yazdır"
+      debug:
+        msg: "İşlem Başarılı! Port: {{ dynamic_port }} üzerinden erişebilirsiniz."
