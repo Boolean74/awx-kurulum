@@ -4,6 +4,7 @@
   gather_facts: no
   vars:
     user_choice: "full_vm"
+    vnc_password: "changeme"
 
   tasks:
     - name: "KASM: ARM64 Native Desktop Kuruluyor"
@@ -15,15 +16,20 @@
         shm_size: "1g"
         privileged: true
         env:
-          VNC_PW: "password123"
+          VNC_PW: "{{ vnc_password }}"
         published_ports:
           - "30500:6901"
       when: user_choice == 'full_vm'
 
     - name: "LIGHT: Ubuntu Container"
       community.docker.docker_container:
-        name: "mcloud_light_{{ 9999 | random }}"
+        name: "mcloud_light_{{ now().strftime('%Y%m%d%H%M%S') }}"
         image: "arm64v8/ubuntu:latest"
         state: started
+        restart_policy: unless-stopped
         command: sleep infinity
       when: user_choice == 'light_container'
+
+    - name: "Sonuç Raporu"
+      debug:
+        msg: "{{ user_choice }} başarıyla başlatıldı."
