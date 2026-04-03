@@ -28,4 +28,12 @@
     - name: "LIGHT: Ubuntu Container"
       community.docker.docker_container:
         name: "mcloud_light_{{ now().strftime('%Y%m%d%H%M%S') }}"
-        image: "arm64v8/ubuntu
+        image: "arm64v8/ubuntu:latest"
+        state: started
+        restart_policy: unless-stopped
+        command: sleep infinity
+      when: user_choice == 'light_container'
+
+    - name: "Sonuc"
+      debug:
+        msg: "{{ user_choice }} basariyla basladi."
