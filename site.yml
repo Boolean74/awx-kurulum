@@ -1,35 +1,31 @@
 ---
-- name: "M-Cloud Kasm VNC Provisioning"
+- name: "M-Cloud VNC Provisioning"
   hosts: all
   gather_facts: no
   vars:
     user_choice: "full_vm"
-    vnc_password: "changeme"
+    vnc_password: "password123"
 
   tasks:
-    - name: "KASM: ARM64 Native Desktop Kuruluyor"
+    - name: "DESKTOP: Webtop XFCE Kuruluyor"
       community.docker.docker_container:
-        name: "mcloud_kasm_desktop"
-        image: "kasmweb/ubuntu-jammy-desktop:1.15.0"
+        name: "mcloud_desktop"
+        image: "lscr.io/linuxserver/webtop:ubuntu-xfce"
         state: started
         restart_policy: always
         shm_size: "1g"
-        privileged: true
         env:
-          VNC_PW: "{{ vnc_password }}"
+          PUID: "1000"
+          PGID: "1000"
+          TZ: "Europe/Istanbul"
+          PASSWORD: "{{ vnc_password }}"
         published_ports:
-          - "30500:6901"
+          - "30500:3000"
+        volumes:
+          - "/mnt/depo/webtop:/config"
       when: user_choice == 'full_vm'
 
     - name: "LIGHT: Ubuntu Container"
       community.docker.docker_container:
         name: "mcloud_light_{{ now().strftime('%Y%m%d%H%M%S') }}"
-        image: "arm64v8/ubuntu:latest"
-        state: started
-        restart_policy: unless-stopped
-        command: sleep infinity
-      when: user_choice == 'light_container'
-
-    - name: "Sonuç Raporu"
-      debug:
-        msg: "{{ user_choice }} başarıyla başlatıldı."
+        image: "arm64v8/ubuntu
